@@ -1,0 +1,1 @@
+ vocalistite.config.{js,ts,json}

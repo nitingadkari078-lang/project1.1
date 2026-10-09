@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediVault - Patient-Controlled Medical Records</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .fade-in {
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+  <div id="app" class="flex-1 flex flex-col"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toasts" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <script>
+    // --- Internationalization / Translations ---
+    const i18n = {
+      en: {
+        appName: 'MediVault',
+        tagline: 'Patient-Controlled Medical Records',
+        subTagline: 'Zero-Trust, Patient-Controlled Medical Record Sharing & Cryptographic Access Keys',
+        signInGoogle: 'Sign In with Google',
+        securityVerified: 'HIPAA & GDPR End-to-End Consent Architecture',
+        welcomeBack: 'Welcome back',
+        welcomeSub: 'Your health records are safeguarded with patient-controlled cryptographic keys. You have complete authority over sharing scopes and revocation.',
+        dashboard: 'Dashboard',
+        records: 'My Records',
+        keys: 'Hospital Keys',
+        hospitals: 'Hospitals',
+        emergency: 'Emergency Access',
+        myProfile: 'My Profile',
+        signOut: 'Sign Out',
+        totalRecords: 'Medical Records',
+        activeKeys: 'Hospital Private Keys',
+        networkHospitals: 'Verified Hospitals',
+        emergencyEvents: 'Emergency Events',
+        auditLog: 'Recent Security & Sharing Audit Log',
+        verifiedImmutable: 'Verified Immutable',
+        emergencyCard: 'Emergency Clinical Card',
+        alwaysReady: 'Always Ready',
+        bloodGroup: 'Blood Group',
+        allergies: 'Critical Allergies',
+        medications: 'Current Medications',
+        emergencyContact: 'Emergency Contact',
+        editSnapshot: 'Edit Emergency Snapshot',
+        medicalRecordsTitle: 'Medical Records',
+        medicalRecordsSub: 'Review consultation logs, lab diagnostics, and control read-only authorization.',
+        authorizeSharing: 'Authorize New Sharing',
+        recordName: 'Medical Record & Clinical Case',
+        hospitalProvider: 'Hospital & Provider',
+        date: 'Date',
+        category: 'Category',
+        sharingScope: 'Sharing Scope',
+        actions: 'Actions',
+        readOnlyShared: 'Read-Only Shared',
+        privateEncrypted: 'Private (Encrypted)',
+        revoke: 'Revoke',
+        share: 'Share',
+        hospitalKeysTitle: 'Hospital Private Keys',
+        hospitalKeysSub: 'Store these keys securely in your password manager. Each hospital receives an isolated cryptographic identifier.',
+        generateKey: 'Generate Hospital Key',
+        activeValid: 'Active & Valid',
+        keyAge: 'Key Age',
+        autoExpires: 'Auto-Expires',
+        savePasswordManager: 'Save to Password Manager',
+        copied: 'Copied to Clipboard',
+        hospitalDirectory: 'Hospital Network Directory',
+        hospitalDirectorySub: 'Connect authorized medical institutions and manage data permissions.',
+        verified: 'Verified',
+        keyConfigured: 'Key Configured',
+        noKey: 'No Key Generated',
+        visitsOnFile: 'Visits on File',
+        manageKey: 'Manage Key',
+        viewRecords: 'View Records',
+        emergencyProtocol: 'Emergency Access Protocol',
+        emergencyProtocolSub: 'Emergency override is strictly restricted to authorized emergency departments with mandatory reason & audit tracking.',
+        simulateEmergency: 'Simulate Emergency Override',
+        emergencySnapshotTitle: 'Emergency Clinical Snapshot (Accessible in Trauma)',
+        emergencySnapshotSub: 'Only basic life-saving medical parameters are unlocked during emergency access without explicit consent.',
+        auditedHistory: 'Audited Emergency Access History',
+        patientNotified: 'Patient Notified',
+        saveProfile: 'Save Profile',
+        cancel: 'Cancel',
+        grantConsent: 'Grant Consent',
+        authorizeEmergency: 'Authorize Emergency',
+        fullName: 'Full Name',
+        age: 'Age',
+        phone: 'Phone Number',
+      },
+      hi: {
+        appName: 'मेडिवाल्ट',
+        tagline: 'मरीज़-नियंत्रित चिकित्सा रिकॉर्ड',
+        subTagline: 'शून्य-विश्वास, मरीज़-नियंत्रित मेडिकल रिकॉर्ड शेयरिंग और क्रिप्टोग्राफ़िक सुरक्षा कुंजियाँ',
+        signInGoogle: 'Google से साइन इन करें',
+        securityVerified: 'HIPAA और GDPR एंड-टू-एंड सहमति सुरक्षा',
+        welcomeBack: 'वापसी पर स्वागत है',
+        welcomeSub: 'आपके स्वास्थ्य रिकॉर्ड मरीज़-नियंत्रित क्रिप्टोग्राफ़िक कुंजियों द्वारा पूरी तरह सुरक्षित हैं।',
+        dashboard: 'डैशबोर्ड',
+        records: 'मेरे रिकॉर्ड्स',
+        keys: 'अस्पताल कुंजियाँ',
+        hospitals: 'अस्पताल नेटवर्क',
+        emergency: 'आपातकालीन पहुँच',
+        myProfile: 'मेरी प्रोफ़ाइल',
+        signOut: 'साइन आउट',
+        totalRecords: 'सुरक्षित मेडिकल रिकॉर्ड',
+        activeKeys: 'सक्रिय अस्पताल कुंजियाँ',
+        networkHospitals: 'सत्यापित अस्पताल',
+        emergencyEvents: 'आपातकालीन इवेंट्स',
+        auditLog: 'हालिया सुरक्षा एवं शेयरिंग ऑडिट लॉग',
+        verifiedImmutable: 'अपरिवर्तनीय रूप से प्रमाणित',
+        emergencyCard: 'आपातकालीन क्लिनिकल कार्ड',
+        alwaysReady: 'सदा तैयार',
+        bloodGroup: 'रक्त समूह',
+        allergies: 'गंभीर एलर्जी',
+        medications: 'वर्तमान दवाएं',
+        emergencyContact: 'आपातकालीन संपर्क',
+        editSnapshot: 'आपातकालीन डेटा बदलें',
+        medicalRecordsTitle: 'मेडिकल रिकॉर्ड्स',
+        medicalRecordsSub: 'परामर्श, लैब रिपोर्ट्स देखें और पढ़ने की अनुमति नियंत्रित करें।',
+        authorizeSharing: 'नया शेयरिंग अधिकृत करें',
+        recordName: 'मेडिकल रिकॉर्ड एवं केस',
+        hospitalProvider: 'अस्पताल व डॉक्टर',
+        date: 'दिनांक',
+        category: 'श्रेणी',
+        sharingScope: 'शेयरिंग दायरा',
+        actions: 'क्रियाएँ',
+        readOnlyShared: 'रीड-ओनली शेयर किया गया',
+        privateEncrypted: 'निजी (एन्क्रिप्टेड)',
+        revoke: 'रद्द करें',
+        share: 'शेयर करें',
+        hospitalKeysTitle: 'अस्पताल प्राइवेट कुंजियाँ',
+        hospitalKeysSub: 'इन कुंजियों को अपने पासवर्ड मैनेजर में सुरक्षित रखें। प्रत्येक अस्पताल को अलग कोड मिलता है।',
+        generateKey: 'नई कुंजी बनाएं',
+        activeValid: 'सक्रिय व मान्य',
+        keyAge: 'कुंजी आयु',
+        autoExpires: 'स्वतः समाप्ति',
+        savePasswordManager: 'पासवर्ड मैनेजर में सहेजें',
+        copied: 'क्लिपबोर्ड पर कॉपी किया गया',
+        hospitalDirectory: 'अस्पताल नेटवर्क निर्देशिका',
+        hospitalDirectorySub: 'मान्यता प्राप्त चिकित्सा संस्थानों को जोड़ें और अनुमति प्रबंधित करें।',
+        verified: 'सत्यापित',
+        keyConfigured: 'कुंजी कॉन्फ़िगर है',
+        noKey: 'कुंजी नहीं बनी है',
+        visitsOnFile: 'विज़िट रिकॉर्ड्स',
+        manageKey: 'कुंजी प्रबंधित करें',
+        viewRecords: 'रिकॉर्ड्स देखें',
+        emergencyProtocol: 'आपातकालीन एक्सेस प्रोटोकॉल',
+        emergencyProtocolSub: 'आपातकालीन एक्सेस केवल अधिकृत ट्रॉमा विभागों तक सीमित है और ऑडिट किया जाता है।',
+        simulateEmergency: 'आपातकालीन एक्सेस टेस्ट करें',
+        emergencySnapshotTitle: 'आपातकालीन क्लिनिकल विवरण',
+        emergencySnapshotSub: 'आपातकाल में केवल जीवन रक्षक प्राथमिक डेटा ही साझा किया जाता है।',
+        auditedHistory: 'ऑडिटेड आपातकालीन इतिहास',
+        patientNotified: 'मरीज़ को सूचित किया गया',
+        saveProfile: 'प्रोफ़ाइल सहेजें',
+        cancel: 'रद्द करें',
+        grantConsent: 'सहमति दें',
+        authorizeEmergency: 'आपातकाल अधिकृत करें',
+        fullName: 'पूरा नाम',
+        age: 'आयु',
+        phone: 'फ़ोन नंबर',
+      },
+      mr: {
+        appName: 'मेडिवाल्ट',
+        tagline: 'रुग्ण-नियंत्रित वैद्यकीय नोंदी',
+        subTagline: 'झिरो-ट्रस्ट, रुग्ण-नियंत्रित वैद्यकीय डेटा शेअरिंग आणि एनक्रिप्टेड सुरक्षा कीज',
+        signInGoogle: 'Google सह साइन इन करा',
+        securityVerified: 'HIPAA आणि GDPR एंड-टू-एंड सुरक्षा मान्यता',
+        welcomeBack: 'पुन्हा स्वागत आहे',
+        welcomeSub: 'तुमच्या आरोग्य नोंदी रुग्ण-नियंत्रित क्रिप्टोग्राफिक कीज द्वारे पूर्णपणे सुरक्षित आहेत.',
+        dashboard: 'डॅशबोर्ड',
+        records: 'माझे रेकॉर्ड्स',
+        keys: 'हॉस्पिटल कीज',
+        hospitals: 'हॉस्पिटल नेटवर्क',
+        emergency: 'आपत्कालीन प्रवेश',
+        myProfile: 'माझी प्रोफाइल',
+        signOut: 'साइन आउट करा',
+        totalRecords: 'वैद्यकीय नोंदी',
+        activeKeys: 'सक्रिय हॉस्पिटल कीज',
+        networkHospitals: 'नोंदणीकृत हॉस्पिटल्स',
+        emergencyEvents: 'आपत्कालीन घटना',
+        auditLog: 'सुरक्षा व शेअरिंग ऑडिट लॉग',
+        verifiedImmutable: 'अपरिवर्तनीय सुरक्षित',
+        emergencyCard: 'आपत्कालीन क्लिनिकल कार्ड',
+        alwaysReady: 'नेहमी सज्ज',
+        bloodGroup: 'रक्तगट',
+        allergies: 'अ‍ॅलर्जी',
+        medications: 'चालू औषधे',
+        emergencyContact: 'आपत्कालीन संपर्क',
+        editSnapshot: 'माहिती संपादित करा',
+        medicalRecordsTitle: 'वैद्यकीय नोंदी',
+        medicalRecordsSub: 'तपासणी अहवाल, लॅब चाचण्या पहा आणि परवानग्या नियंत्रित करा.',
+        authorizeSharing: 'नवीन शेअरिंग मंजूर करा',
+        recordName: 'वैद्यकीय नोंद व केस',
+        hospitalProvider: 'हॉस्पिटल व डॉक्टर',
+        date: 'तारीख',
+        category: 'प्रवर्ग',
+        sharingScope: 'शेअरिंग मर्यादा',
+        actions: 'कृती',
+        readOnlyShared: 'फक्त वाचण्यायोग्य शेअर केलेले',
+        privateEncrypted: 'खाजगी (एनक्रिप्टेड)',
+        revoke: 'रद्द करा',
+        share: 'शेअर करा',
+        hospitalKeysTitle: 'हॉस्पिटल प्रायव्हेट कीज',
+        hospitalKeysSub: 'या कीज तुमच्या पासवर्ड मॅनेजरमध्ये सुरक्षित ठेवा. प्रत्येक हॉस्पिटलला वेगळी की मिळते.',
+        generateKey: 'नवीन की तयार करा',
+        activeValid: 'सक्रिय व वैध',
+        keyAge: 'की चे वय',
+        autoExpires: 'मुदत संपण्याची वेळ',
+        savePasswordManager: 'पासवर्ड मॅनेजरमध्ये सेव्ह करा',
+        copied: 'कॉपी केले',
+        hospitalDirectory: 'हॉस्पिटल डिरेक्टरी',
+        hospitalDirectorySub: 'अधिकृत वैद्यकीय संस्था जोडा आणि डेटा परवानग्या व्यवस्थापित करा.',
+        verified: 'प्रमाणित',
+        keyConfigured: 'की तयार केली आहे',
+        noKey: 'की तयार नाही',
+        visitsOnFile: 'उपस्थिती नोंदी',
+        manageKey: 'की व्यवस्थापित करा',
+        viewRecords: 'रेकॉर्ड्स पहा',
+        emergencyProtocol: 'आपत्कालीन प्रवेश नियम',
+        emergencyProtocolSub: 'आपत्कालीन प्रवेश फक्त मान्यताप्राप्त ट्रॉमा विभागासाठीच मर्यादित असून त्याची नोंद ठेवली जाते.',
+        simulateEmergency: 'आपत्कालीन प्रवेश चाचणी करा',
+        emergencySnapshotTitle: 'आपत्कालीन वैद्यकीय माहिती',
+        emergencySnapshotSub: 'आपत्कालीन परिस्थितीत फक्त जीवनरक्षक प्राथमिक माहिती उपलब्ध केली जाते.',
+        auditedHistory: 'ऑडिट झालेला आपत्कालीन इतिहास',
+        patientNotified: 'रुग्णाला सूचना पाठवली',
+        saveProfile: 'प्रोफाइल सेव्ह करा',
+        cancel: 'रद्द करा',
+        grantConsent: 'संमती द्या',
+        authorizeEmergency: 'आपत्कालीन मंजुरी द्या',
+        fullName: 'पूर्ण नाव',
+        age: 'वय',
+        phone: 'फोन नंबर',
+      },
+      es: {
+        appName: 'MediVault',
+        tagline: 'Registros Médicos Controlados por el Paciente',
+        subTagline: 'Cero-Confianza, Registros Médicos Compartidos con Claves Criptográficas',
+        signInGoogle: 'Iniciar sesión con Google',
+        securityVerified: 'Arquitectura de Consentimiento HIPAA y GDPR',
+        welcomeBack: 'Bienvenido de nuevo',
+        welcomeSub: 'Sus registros médicos están protegidos con claves criptográficas bajo su control.',
+        dashboard: 'Panel de Control',
+        records: 'Mis Registros',
+        keys: 'Claves de Hospital',
+        hospitals: 'Hospitales',
+        emergency: 'Acceso de Emergencia',
+        myProfile: 'Mi Perfil',
+        signOut: 'Cerrar Sesión',
+        totalRecords: 'Registros Médicos',
+        activeKeys: 'Claves Privadas Activas',
+        networkHospitals: 'Hospitales Verificados',
+        emergencyEvents: 'Eventos de Emergencia',
+        auditLog: 'Registro de Auditoría de Seguridad',
+        verifiedImmutable: 'Inmutable Verificado',
+        emergencyCard: 'Tarjeta Clínica de Emergencia',
+        alwaysReady: 'Siempre Disponible',
+        bloodGroup: 'Grupo Sanguíneo',
+        allergies: 'Alergias Críticas',
+        medications: 'Medicamentos Actuales',
+        emergencyContact: 'Contacto de Emergencia',
+        editSnapshot: 'Editar Datos de Emergencia',
+        medicalRecordsTitle: 'Registros Médicos',
+        medicalRecordsSub: 'Revise informes clínicos, análisis de laboratorio y gestione accesos.',
+        authorizeSharing: 'Autorizar Nuevo Acceso',
+        recordName: 'Registro Médico y Caso',
+        hospitalProvider: 'Hospital y Doctor',
+        date: 'Fecha',
+        category: 'Categoría',
+        sharingScope: 'Alcance del Acceso',
+        actions: 'Acciones',
+        readOnlyShared: 'Compartido (Solo Lectura)',
+        privateEncrypted: 'Privado (Cifrado)',
+        revoke: 'Revocar',
+        share: 'Compartir',
+        hospitalKeysTitle: 'Claves Privadas de Hospital',
+        hospitalKeysSub: 'Guarde estas claves de forma segura en su gestor de contraseñas.',
+        generateKey: 'Generar Clave de Hospital',
+        activeValid: 'Activa y Válida',
+        keyAge: 'Antigüedad',
+        autoExpires: 'Expira en',
+        savePasswordManager: 'Guardar en Gestor de Contraseñas',
+        copied: 'Copiado al Portapapeles',
+        hospitalDirectory: 'Directorio de Hospitales',
+        hospitalDirectorySub: 'Conecte instituciones médicas autorizadas y administre permisos.',
+        verified: 'Verificado',
+        keyConfigured: 'Clave Configurada',
+        noKey: 'Sin Clave Generada',
+        visitsOnFile: 'Visitas Registradas',
+        manageKey: 'Gestionar Clave',
+        viewRecords: 'Ver Registros',
+        emergencyProtocol: 'Protocolo de Acceso de Emergencia',
+        emergencyProtocolSub: 'El acceso de emergencia está estrictamente regulado y auditado.',
+        simulateEmergency: 'Simular Acceso de Emergencia',
+        emergencySnapshotTitle: 'Ficha Clínica de Emergencia',
+        emergencySnapshotSub: 'Solo datos vitales para emergencias sin consentimiento explícito.',
+        auditedHistory: 'Historial Auditado de Emergencias',
+        patientNotified: 'Paciente Notificado',
+        saveProfile: 'Guardar Perfil',
+        cancel: 'Cancelar',
+        grantConsent: 'Conceder Consentimiento',
+        authorizeEmergency: 'Autorizar Emergencia',
+        fullName: 'Nombre Completo',
+        age: 'Edad',
+        phone: 'Teléfono',
+      },
+      fr: {
+        appName: 'MediVault',
+        tagline: 'Dossiers Médicaux Contrôlés par le Patient',
+        subTagline: 'Partage de données médicales Zero-Trust avec clés cryptographiques',
+        signInGoogle: 'Se connecter avec Google',
+        securityVerified: 'Architecture de consentement conforme HIPAA et RGPD',
+        welcomeBack: 'Bon retour',
+        welcomeSub: 'Vos données médicales sont sécurisées par des clés privées inviolables.',
+        dashboard: 'Tableau de bord',
+        records: 'Mes Dossiers',
+        keys: 'Clés Hôpitaux',
+        hospitals: 'Hôpitaux',
+        emergency: 'Accès Urgence',
+        myProfile: 'Mon Profil',
+        signOut: 'Déconnexion',
+        totalRecords: 'Dossiers Médicaux',
+        activeKeys: 'Clés Privées Actives',
+        networkHospitals: 'Hôpitaux Vérifiés',
+        emergencyEvents: 'Événements Urgence',
+        auditLog: 'Journal d\'Audit de Sécurité',
+        verifiedImmutable: 'Vérifié Inaltérable',
+        emergencyCard: 'Fiche Clinique d\'Urgence',
+        alwaysReady: 'Toujours Prêt',
+        bloodGroup: 'Groupe Sanguin',
+        allergies: 'Allergies Majeures',
+        medications: 'Traitements Actuels',
+        emergencyContact: 'Contact d\'Urgence',
+        editSnapshot: 'Modifier l\'Aperçu',
+        medicalRecordsTitle: 'Dossiers Médicaux',
+        medicalRecordsSub: 'Consultez vos bilans, analyses et gérez les droits d\'accès en lecture.',
+        authorizeSharing: 'Autoriser un Partage',
+        recordName: 'Dossier et Examen',
+        hospitalProvider: 'Hôpital et Praticien',
+        date: 'Date',
+        category: 'Catégorie',
+        sharingScope: 'Périmètre de Partage',
+        actions: 'Actions',
+        readOnlyShared: 'Partagé (Lecture Seule)',
+        privateEncrypted: 'Privé (Chiffré)',
+        revoke: 'Révoquer',
+        share: 'Partager',
+        hospitalKeysTitle: 'Clés Privées Hospitalières',
+        hospitalKeysSub: 'Conservez ces clés en toute sécurité dans votre gestionnaire de mots de passe.',
+        generateKey: 'Générer une Clé',
+        activeValid: 'Active et Valide',
+        keyAge: 'Âge de la Clé',
+        autoExpires: 'Expire Dans',
+        savePasswordManager: 'Sauvegarder dans Gestionnaire',
+        copied: 'Copié dans le Presse-papiers',
+        hospitalDirectory: 'Annuaire Hospitalier',
+        hospitalDirectorySub: 'Connectez des centres médicaux et gérez les autorisations.',
+        verified: 'Vérifié',
+        keyConfigured: 'Clé Configurée',
+        noKey: 'Aucune Clé',
+        visitsOnFile: 'Consultations',
+        manageKey: 'Gérer la Clé',
+        viewRecords: 'Voir les Dossiers',
+        emergencyProtocol: 'Protocole d\'Accès d\'Urgence',
+        emergencyProtocolSub: 'L\'accès d\'urgence est strictement réservé aux services de traumatologie et entièrement audité.',
+        simulateEmergency: 'Simuler une Urgence',
+        emergencySnapshotTitle: 'Aperçu Médical d\'Urgence',
+        emergencySnapshotSub: 'Seules les données vitales sont accessibles en cas d\'urgence vitale.',
+        auditedHistory: 'Historique des Accès d\'Urgence',
+        patientNotified: 'Patient Notifié',
+        saveProfile: 'Enregistrer le Profil',
+        cancel: 'Annuler',
+        grantConsent: 'Accorder l\'Accès',
+        authorizeEmergency: 'Autoriser l\'Urgence',
+        fullName: 'Nom Complet',
+        age: 'Âge',
+        phone: 'Téléphone',
+      },
+      de: {
+        appName: 'MediVault',
+        tagline: 'Patientengesteuerte Krankenakten',
+        subTagline: 'Zero-Trust medizinische Datenspeicherung mit kryptografischen Schlüsseln',
+        signInGoogle: 'Mit Google anmelden',
+        securityVerified: 'HIPAA & DSGVO konforme Sicherheitsarchitektur',
+        welcomeBack: 'Willkommen zurück',
+        welcomeSub: 'Ihre Gesundheitsakten sind mit kryptografischen Patientenschlüsseln geschützt.',
+        dashboard: 'Dashboard',
+        records: 'Meine Akten',
+        keys: 'Klinikschlüssel',
+        hospitals: 'Kliniken',
+        emergency: 'Notfallzugriff',
+        myProfile: 'Mein Profil',
+        signOut: 'Abmelden',
+        totalRecords: 'Medizinische Akten',
+        activeKeys: 'Aktive Klinikschlüssel',
+        networkHospitals: 'Verifizierte Kliniken',
+        emergencyEvents: 'Notfall-Ereignisse',
+        auditLog: 'Sicherheits-Audit-Protokoll',
+        verifiedImmutable: 'Unveränderlich verifiziert',
+        emergencyCard: 'Klinischer Notfallausweis',
+        alwaysReady: 'Stets bereit',
+        bloodGroup: 'Blutgruppe',
+        allergies: 'Kritische Allergien',
+        medications: 'Aktuelle Medikamente',
+        emergencyContact: 'Notfallkontakt',
+        editSnapshot: 'Notfallprofil bearbeiten',
+        medicalRecordsTitle: 'Medizinische Akten',
+        medicalRecordsSub: 'Befunde einsehen und Lese-Freigaben steuern.',
+        authorizeSharing: 'Freigabe erteilen',
+        recordName: 'Akte & Befund',
+        hospitalProvider: 'Klinik & Arzt',
+        date: 'Datum',
+        category: 'Kategorie',
+        sharingScope: 'Freigabeumfang',
+        actions: 'Aktionen',
+        readOnlyShared: 'Schreibgeschützt geteilt',
+        privateEncrypted: 'Privat (Verschlüsselt)',
+        revoke: 'Widerrufen',
+        share: 'Teilen',
+        hospitalKeysTitle: 'Private Klinikschlüssel',
+        hospitalKeysSub: 'Speichern Sie diese Schlüssel sicher in Ihrem Passwort-Manager.',
+        generateKey: 'Schlüssel generieren',
+        activeValid: 'Aktiv & Gültig',
+        keyAge: 'Schlüsselalter',
+        autoExpires: 'Gültig bis',
+        savePasswordManager: 'Im Passwort-Manager sichern',
+        copied: 'In die Zwischenablage kopiert',
+        hospitalDirectory: 'Klinikverzeichnis',
+        hospitalDirectorySub: 'Verbinden Sie medizinische Einrichtungen und verwalten Sie Freigaben.',
+        verified: 'Verifiziert',
+        keyConfigured: 'Schlüssel hinterlegt',
+        noKey: 'Kein Schlüssel',
+        visitsOnFile: 'Dokumentierte Besuche',
+        manageKey: 'Schlüssel verwalten',
+        viewRecords: 'Akten ansehen',
+        emergencyProtocol: 'Notfallprotokoll',
+        emergencyProtocolSub: 'Notfallzugriff ist streng reglementiert und wird lückenlos auditiert.',
+        simulateEmergency: 'Notfall simulieren',
+        emergencySnapshotTitle: 'Notfall-Vitaldaten',
+        emergencySnapshotSub: 'Nur lebensrettende Basisdaten werden im Notfall freigegeben.',
+        auditedHistory: 'Auditierte Notfallzugriffe',
+        patientNotified: 'Patient benachrichtigt',
+        saveProfile: 'Profil speichern',
+        cancel: 'Abbrechen',
+        grantConsent: 'Zustimmung erteilen',
+        authorizeEmergency: 'Notfall autorisieren',
+        fullName: 'Vollständiger Name',
+        age: 'Alter',
+        phone: 'Telefonnummer',
+      },
+      ml: {
+        appName: 'മെഡിവോൾട്ട്',
+        tagline: 'രോഗി നിയന്ത്രിക്കുന്ന മെഡിക്കൽ രേഖകൾ',
+        subTagline: 'സുരക്ഷിതമായ മെഡിക്കൽ രേഖകൾ, രോഗി നിയന്ത്രിക്കുന്ന സംരക്ഷണം, ക്രിപ്റ്റോഗ്രാഫിക് ആക്സസ് കീസ്',
+        signInGoogle: 'ഗൂഗിലിൽ ലോഗിൻ ചെയ്യുക',
+        securityVerified: 'HIPAA & GDPR എൻഡ്-ടു-എൻഡ് കൺസെൻറ്റ് ആർക്കിടെക്ചർ',
+        welcomeBack: 'വീണ്ടും സ്വാഗതം',
+        welcomeSub: 'നിങ്ങളുടെ ആരോഗ്യ രേഖകൾ രോഗി നിയന്ത്രിക്കുന്ന ക്രിപ്റ്റോഗ്രാഫിക് കീസുകളാൽ സംരക്ഷിക്കപ്പെട്ടിരിക്കുന്നു.',
+        dashboard: 'ഡാഷ്‌ബോർഡ്',
+        records: 'എന്റെ രേഖകൾ',
+        keys: 'ആശുപായ കീസ്',
+        hospitals: 'ആശുപായങ്ങൾ',
+        emergency: 'അടിക്കടുക്കം പ്രവേശനം',
+        myProfile: 'എന്റെ പ്രൊഫൈൽ',
+        signOut: 'പുറത്തു കടക്കുക',
+        totalRecords: 'മെഡിക്കൽ രേഖകൾ',
+        activeKeys: 'സക്രിയമായ ആശുപായ കീസ്',
+        networkHospitals: 'പരിശോധിച്ച ആശുപായങ്ങൾ',
+        emergencyEvents: 'അടിക്കടുക്കം ഇവന്റുകൾ',
+        auditLog: 'സുരക്ഷാ ആക്സസ് ലോഗ്',
+        verifiedImmutable: 'ഉറപ്പാക്കിയ അനിവാര്യം',
+        emergencyCard: 'അടിക്കടുക്കം ക്ലിനിക്കൽ കാർഡ്',
+        alwaysReady: 'എപ്പോഴും തയ്യാറാണ്',
+        bloodGroup: 'രക്ത ഗ്രൂപ്പ്',
+        allergies: 'വിഷാദങ്ങൾ',
+        medications: 'നിലവിലെ മരുന്നുകൾ',
+        emergencyContact: 'അടിക്കടുക്കം സംപർക്കം',
+        editSnapshot: 'അടിക്കടുക്കം സ്നാപ്പ്‌ഷോട്ട് എഡിറ്റുചെയ്യുക',
+        medicalRecordsTitle: 'മെഡിക്കൽ രേഖകൾ',
+        medicalRecordsSub: 'കൺസൾട്ടേഷൻ ലോഗുകൾ, ലാബ് റിപ്പോർട്ടുകൾ കാണുകയും റീഡ്-ഓൺലി അനുമതി നിയന്ത്രിക്കുകയും ചെയ്യുക.',
+        authorizeSharing: 'പുതിയ അനുമതി നൽകുക',
+        recordName: 'മെഡിക്കൽ രേഖയും കേസും',
+        hospitalProvider: 'ആശുപായവും പ്രൊവൈഡറും',
+        date: 'തീയതി',
+        category: 'വർഗ്ഗം',
+        sharingScope: 'അനുമതി സ്കോപ്പ്',
+        actions: 'പ്രവർത്തനങ്ങൾ',
+        readOnlyShared: 'റീഡ്-ഓൺലി പങ്കിട്ടു',
+        privateEncrypted: 'സ്വകാര്യം (എൻക്രിപ്റ്റഡ്)',
+        revoke: 'റദ്ദാക്കുക',
+        share: 'പങ്കിടുക',
+        hospitalKeysTitle: 'ആശുപായ സ്വകാര്യ കീസ്',
+        hospitalKeysSub: 'ഈ കീസ് സുരക്ഷിതമായി നിങ്ങളുടെ പാസ്‌വേഡ് മാനേജറിൽ സൂക്ഷിക്കുക.',
+        generateKey: 'ആശുപായ കീ സൃഷ്ടിക്കുക',
+        activeValid: 'സക്രിയവും ശേഷിക്കുന്നതും',
+        keyAge: 'കീ ആയുസ്സ്',
+        autoExpires: 'ഓട്ടോ-എക്സ്പൈറി',
+        savePasswordManager: 'പാസ്‌വേഡ് മാനേജറിൽ സൂക്ഷിക്കുക',
+        copied: 'ക്ലിപ്പ്‌ബോർഡിലേക്ക് കോപ്പി ചെയ്തു',
+        hospitalDirectory: 'ആശുപായ നെറ്റ്‌വർക്ക് ഡയറക്ടറി',
+        hospitalDirectorySub: 'അനുമതി നൽകിയ മെഡിക്കൽ സ്ഥാപനങ്ങളുമായി ബന്ധിപ്പിക്കുകയും അനുമതി നിർവഹിക്കുകയും ചെയ്യുക.',
+        verified: 'പരിശോധിച്ചു',
+        keyConfigured: 'കീ കോൺഫിഗർ ചെയ്തു',
+        noKey: 'കീ സൃഷ്ടിച്ചിട്ടില്ല',
+        visitsOnFile: 'രേഖപ്പെടുത്തിയ സന്ദർശനങ്ങൾ',
+        manageKey: 'കീ നിർവഹിക്കുക',
+        viewRecords: 'രേഖകൾ കാണുക',
+        emergencyProtocol: 'അടിക്കടുക്കം പ്രവേശന പ്രോട്ടോക്കോൾ',
+        emergencyProtocolSub: 'അടിക്കടുക്കം ഓവർറൈഡ് ആവശ്യമായ ആശുപായത്തെ മാത്രമേ അനുവദിക്കൂ, നിർബന്ധമായ കാരണവും ഓഡിറ്റ് ട്രാക്കിംഗും ഉണ്ട്.',
+        simulateEmergency: 'അടിക്കടുക്കം ഓവർറൈഡ് സിമുലേറ്റുചെയ്യുക',
+        emergencySnapshotTitle: 'അടിക്കടുക്കം ക്ലിനിക്കൽ സ്നാപ്പ്‌ഷോട്ട് (ട്രോമയിൽ ലഭ്യം)',
+        emergencySnapshotSub: 'നിർബന്ധമായ അനുമതിയില്ലാതെ അടിക്കടുക്കം പ്രവേശനത്തിനിടെ കേവലം ജീവനുള്ള മെഡിക്കൽ പ്രാധാന്യങ്ങൾ മാത്രമേ ലഭ്യമാകൂ.',
+        auditedHistory: 'ഓഡിറ്റ് ചെയ്ത അടിക്കടുക്കം പ്രവേശന ചരിത്രം',
+        patientNotified: 'രോഗിയെ അറിയിച്ചു',
+        saveProfile: 'പ്രൊഫൈൽ സൂക്ഷിക്കുക',
+        cancel: 'റദ്ദാക്കുക',
+        grantConsent: 'അനുമതി നൽകുക',
+        authorizeEmergency: 'അടിക്കടുക്കം അനുമതി നൽകുക',
+        fullName: 'പൂർണ്ണ പേര്',
+        age: 'പ്രായം',
+        phone: 'ഫോൺ നമ്പർ',
+      }
+    };
+
+    const langList = [
+      { code: 'en', label: 'English', flag: '🇺🇸' },
+      { code: 'ml', label: 'മലയാളം', flag: '🇮🇳' },
+      { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+      { code: 'mr', label: 'मराठी', flag: '🇮🇳' },
+      { code: 'es', label: 'Español', flag: '🇪🇸' },
+      { code: 'fr', label: 'Français', flag: '🇫🇷' },
+      { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+    ];
+
+    function t(key) {
+      const current = state.lang || 'en';
+      return (i18n[current] && i18n[current][key]) || (i18n.en && i18n.en[key]) || key;
+    }
+
+    function setLanguage(code) {
+      state.lang = code;
+      saveState();
+      render();
+    }
+
+    // --- Application State ---
+    const defaultData = {
+      lang: 'en',
+      user: {
+        id: 'usr_demo_101',
+        fullName: 'Alex Morgan',
+        email: 'alex.morgan@medivault.io',
+        age: 34,
+        phone: '+1 (555) 234-5678',
+        bloodGroup: 'O Positive',
+        allergies: ['Penicillin', 'Peanuts (Mild)'],
+        medications: ['Lisinopril 10mg', 'Multivitamin daily'],
+        emergencyContact: 'Sarah Morgan (Spouse) - +1 (555) 987-6543'
+      },
+      currentTab: 'dashboard',
+      hospitals: [
+        { id: 'h1', name: 'City General Hospital', city: 'New York', code: 'EMR001', hasKey: true, visits: 3 },
+        { id: 'h2', name: 'Memorial Medical Center', city: 'Los Angeles', code: 'EMR002', hasKey: true, visits: 2 },
+        { id: 'h3', name: 'St. Jude Health & Research', city: 'Memphis', code: 'EMR003', hasKey: false, visits: 0 },
+        { id: 'h4', name: 'Mayo Regional Clinic', city: 'Rochester', code: 'EMR004', hasKey: false, visits: 1 }
+      ],
+      keys: [
+        { id: 'k1', hospitalId: 'h1', hospitalName: 'City General Hospital', keyIndex: 'CGH-9921-X9K', ageDays: 14, expiresDays: 76, active: true },
+        { id: 'k2', hospitalId: 'h2', hospitalName: 'Memorial Medical Center', keyIndex: 'MMC-4412-P3B', ageDays: 45, expiresDays: 45, active: true }
+      ],
+      records: [
+        { id: 'r1', hospitalName: 'City General Hospital', date: '2026-11-15', doctor: 'Dr. Sarah Johnson', title: 'Comprehensive Cardiology Screening', type: 'Lab & ECG', notes: 'Normal sinus rhythm, lipid profile within acceptable limits.', shared: true },
+        { id: 'r2', hospitalName: 'Memorial Medical Center', date: '2026-09-08', doctor: 'Dr. Michael Chen', title: 'Orthopedic Knee Evaluation', type: 'Imaging / MRI', notes: 'Mild meniscus strain, recommended 4 weeks physical therapy.', shared: true },
+        { id: 'r3', hospitalName: 'City General Hospital', date: '2026-05-20', doctor: 'Dr. Emily Watson', title: 'Complete Blood Count & Metabolic Panel', type: 'Lab Report', notes: 'All biomarkers optimal. Follow-up in 12 months.', shared: false },
+        { id: 'r4', hospitalName: 'Mayo Regional Clinic', date: '2026-01-14', doctor: 'Dr. Robert Davis', title: 'Annual Preventative Health Assessment', type: 'Clinical Summary', notes: 'Vaccinations up-to-date. Blood pressure 118/76.', shared: false }
+      ],
+      emergencyRequests: [
+        { id: 'eq1', hospital: 'City General Emergency ER', requester: 'Dr. Gregory House', reason: 'Unconscious trauma evaluation following vehicle collision', date: 'Today, 14:35', status: 'Approved', verified: true },
+        { id: 'eq2', hospital: 'Memorial ER Unit', requester: 'Dr. Allison Cameron', reason: 'Severe allergic reaction, patient unable to communicate', date: 'Yesterday', status: 'Approved', verified: true }
+      ],
+      activities: [
+        { icon: 'shield-check', title: 'Emergency access audited and logged', time: '2 hours ago', badge: 'Security' },
+        { icon: 'key', title: 'Hospital private key CGH-9921-X9K verified', time: '5 hours ago', badge: 'Auth' },
+        { icon: 'file-text', title: 'Cardiology report shared with Memorial Center', time: 'Yesterday', badge: 'Consent' },
+        { icon: 'lock', title: 'Patient session authenticated via OAuth', time: '2 days ago', badge: 'Login' }
+      ]
+    };
+
+    let state = JSON.parse(localStorage.getItem('medivault_state') || 'null');
+    if (!state) {
+      state = JSON.parse(JSON.stringify(defaultData));
+      state.isLoggedIn = true;
+      saveState();
+    }
+    if (!state.lang) state.lang = 'en';
+
+    function saveState() {
+      localStorage.setItem('medivault_state', JSON.stringify(state));
+    }
+
+    function showToast(title, message, type = 'success') {
+      const toasts = document.getElementById('toasts');
+      const toast = document.createElement('div');
+      const borderClass = type === 'error' ? 'border-red-400 bg-red-50 text-red-900' : (type === 'info' ? 'border-blue-400 bg-blue-50 text-blue-900' : 'border-emerald-400 bg-emerald-50 text-emerald-900');
+      toast.className = `p-4 rounded-xl shadow-xl border pointer-events-auto fade-in flex items-start gap-3 ${borderClass}`;
+      toast.innerHTML = `
+        <div class="flex-1">
+          <h4 class="font-semibold text-sm">${title}</h4>
+          <p class="text-xs opacity-90 mt-0.5">${message}</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="opacity-60 hover:opacity-100 text-sm font-bold">&times;</button>
+      `;
+      toasts.appendChild(toast);
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+    }
+
+    function navigate(tab) {
+      state.currentTab = tab;
+      saveState();
+      render();
+    }
+
+    function login() {
+      state.isLoggedIn = true;
+      saveState();
+      showToast('Authenticated', 'Signed in successfully via Google OAuth.');
+      render();
+    }
+
+    function logout() {
+      state.isLoggedIn = false;
+      saveState();
+      showToast('Signed Out', 'Your cryptographic session has ended safely.', 'info');
+      render();
+    }
+
+    function revokeKey(keyId) {
+      const reason = prompt('Please enter a clinical or security reason for revocation:');
+      if (!reason) return;
+      state.keys = state.keys.filter(k => k.id !== keyId);
+      state.activities.unshift({
+        icon: 'slash',
+        title: `Key revoked: ${reason}`,
+        time: 'Just now',
+        badge: 'Revoked'
+      });
+      saveState();
+      showToast('Key Revoked', 'The hospital private key has been immediately invalidated.', 'error');
+      render();
+    }
+
+    function generateKey(hospitalId) {
+      const hosp = state.hospitals.find(h => h.id === hospitalId);
+      if (!hosp) return;
+      const keyIndex = `${hosp.code}-${Math.floor(1000 + Math.random() * 9000)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      state.keys.push({
+        id: 'k_' + Date.now(),
+        hospitalId: hosp.id,
+        hospitalName: hosp.name,
+        keyIndex: keyIndex,
+        ageDays: 0,
+        expiresDays: 90,
+        active: true
+      });
+      hosp.hasKey = true;
+      state.activities.unshift({
+        icon: 'key',
+        title: `New private key created for ${hosp.name}`,
+        time: 'Just now',
+        badge: 'Key Generated'
+      });
+      saveState();
+      showToast('New Key Generated', `Created key ${keyIndex} for ${hosp.name}. Saved in vault.`);
+      closeModal();
+      render();
+    }
+
+    function shareRecord(recordId) {
+      const rec = state.records.find(r => r.id === recordId);
+      if (!rec) return;
+      rec.shared = !rec.shared;
+      saveState();
+      showToast(rec.shared ? t('grantConsent') : t('revoke'), rec.shared ? `Authorized read-only access for ${rec.title}` : `Revoked sharing permissions for ${rec.title}`, rec.shared ? 'success' : 'info');
+      render();
+    }
+
+    function copyToClipboard(text, label = 'Key') {
+      navigator.clipboard.writeText(text);
+      showToast(t('copied'), `${label} copied. Save this in your password manager.`);
+    }
+
+    function requestEmergencyAccess(e) {
+      e.preventDefault();
+      const hospital = document.getElementById('emgHosp').value;
+      const doctor = document.getElementById('emgDoctor').value;
+      const reason = document.getElementById('emgReason').value;
+
+      state.emergencyRequests.unshift({
+        id: 'eq_' + Date.now(),
+        hospital: hospital,
+        requester: doctor,
+        reason: reason,
+        date: 'Just now',
+        status: 'Approved (Audited)',
+        verified: true
+      });
+
+      state.activities.unshift({
+        icon: 'alert-triangle',
+        title: `Emergency access initiated by ${doctor} (${hospital})`,
+        time: 'Just now',
+        badge: 'Emergency'
+      });
+
+      saveState();
+      showToast(t('authorizeEmergency'), 'Access logged with high-priority audit & patient alert sent.');
+      closeModal();
+      render();
+    }
+
+    function renderLangSelect() {
+      return `
+        <div class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs">
+          <i data-lucide="globe" class="w-3.5 h-3.5 text-gray-500"></i>
+          <select onchange="setLanguage(this.value)" class="bg-transparent font-medium text-gray-700 outline-none cursor-pointer">
+            ${langList.map(l => `
+              <option value="${l.code}" ${state.lang === l.code ? 'selected' : ''}>
+                ${l.flag} ${l.label}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+      `;
+    }
+
+    function openModal(html) {
+      let modal = document.getElementById('app-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'app-modal';
+        document.body.appendChild(modal);
+      }
+      modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4";
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative fade-in">
+          <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+          ${html}
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('app-modal');
+      if (modal) modal.remove();
+    }
+
+    // --- Render Functions ---
+    function render() {
+      const root = document.getElementById('app');
+
+      if (!state.isLoggedIn) {
+        root.innerHTML = `
+          <div class="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-800 flex flex-col items-center justify-center p-4">
+            <div class="absolute top-4 right-4">
+              ${renderLangSelect()}
+            </div>
+            <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+              <div class="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30 text-white">
+                <i data-lucide="shield" class="w-10 h-10"></i>
+              </div>
+              <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">${t('appName')}</h1>
+              <p class="text-gray-600 mt-2 mb-8 text-sm leading-relaxed">
+                ${t('subTagline')}
+              </p>
+
+              <button onclick="login()" class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-3 text-base hover:-translate-y-0.5">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#fff" d="M12.24 10.285V13.4h6.887C18.2 15.632 15.645 18 12.24 18c-3.37 0-6.1-2.73-6.1-6s2.73-6 6.1-6c1.55 0 2.96.58 4.04 1.54l2.42-2.42C17.15 3.63 14.85 2.7 12.24 2.7 7.14 2.7 3 6.84 3 12s4.14 9.3 9.24 9.3c5.34 0 8.92-3.75 8.92-9.11 0-.62-.06-1.22-.17-1.8H12.24z"/>
+                </svg>
+                ${t('signInGoogle')}
+              </button>
+
+              <div class="mt-8 pt-6 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-emerald-600 font-medium">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span>${t('securityVerified')}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      root.innerHTML = `
+        <!-- Top Navbar -->
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+              <div onclick="navigate('dashboard')" class="flex items-center gap-2.5 cursor-pointer font-bold text-xl text-gray-900">
+                <div class="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-sm">
+                  <i data-lucide="shield" class="w-5 h-5"></i>
+                </div>
+                <span>${t('appName')}</span>
+              </div>
+
+              <nav class="hidden md:flex items-center gap-1">
+                ${[
+                  { id: 'dashboard', label: t('dashboard'), icon: 'layout-dashboard' },
+                  { id: 'records', label: t('records'), icon: 'file-text' },
+                  { id: 'keys', label: t('keys'), icon: 'key' },
+                  { id: 'hospitals', label: t('hospitals'), icon: 'building-2' },
+                  { id: 'emergency', label: t('emergency'), icon: 'alert-triangle' },
+                ].map(t => `
+                  <button onclick="navigate('${t.id}')" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${state.currentTab === t.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}">
+                    <i data-lucide="${t.icon}" class="w-4 h-4"></i>
+                    ${t.label}
+                  </button>
+                `).join('')}
+              </nav>
+            </div>
+
+            <div class="flex items-center gap-3">
+              ${renderLangSelect()}
+
+              <button onclick="showProfileModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors">
+                <i data-lucide="user" class="w-4 h-4 text-blue-600"></i>
+                <span class="hidden sm:inline">${state.user.fullName}</span>
+              </button>
+              <button onclick="logout()" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="${t('signOut')}">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Content View -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+          ${renderTabContent()}
+        </main>
+      `;
+
+      lucide.createIcons();
+    }
+
+    function renderTabContent() {
+      switch (state.currentTab) {
+        case 'dashboard':
+          return `
+            <div class="space-y-8 fade-in">
+              <!-- Welcome banner -->
+              <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">${t('welcomeBack')}, ${state.user.fullName}!</h1>
+                  <p class="text-blue-100 text-sm mt-1 max-w-xl">
+                    ${t('welcomeSub')}
+                  </p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="navigate('records')" class="px-4 py-2.5 bg-white text-blue-700 font-semibold rounded-xl text-sm hover:bg-blue-50 transition-colors shadow-sm">
+                    ${t('records')}
+                  </button>
+                  <button onclick="showEmergencyModal()" class="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl text-sm transition-colors shadow-sm">
+                    ${t('emergency')}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Stat Cards -->
+              <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div onclick="navigate('records')" class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-400 cursor-pointer transition-all">
+                  <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                  </div>
+                  <div class="text-2xl font-bold text-gray-900">${state.records.length}</div>
+                  <div class="text-xs text-gray-500 font-medium mt-0.5">${t('totalRecords')}</div>
+                </div>
+
+                <div onclick="navigate('keys')" class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-400 cursor-pointer transition-all">
+                  <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                    <i data-lucide="key" class="w-5 h-5"></i>
+                  </div>
+                  <div class="text-2xl font-bold text-gray-900">${state.keys.length}</div>
+                  <div class="text-xs text-gray-500 font-medium mt-0.5">${t('activeKeys')}</div>
+                </div>
+
+                <div onclick="navigate('hospitals')" class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-400 cursor-pointer transition-all">
+                  <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-3">
+                    <i data-lucide="building-2" class="w-5 h-5"></i>
+                  </div>
+                  <div class="text-2xl font-bold text-gray-900">${state.hospitals.length}</div>
+                  <div class="text-xs text-gray-500 font-medium mt-0.5">${t('networkHospitals')}</div>
+                </div>
+
+                <div onclick="navigate('emergency')" class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-400 cursor-pointer transition-all">
+                  <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-3">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                  </div>
+                  <div class="text-2xl font-bold text-gray-900">${state.emergencyRequests.length}</div>
+                  <div class="text-xs text-gray-500 font-medium mt-0.5">${t('emergencyEvents')}</div>
+                </div>
+              </div>
+
+              <!-- Quick Activity & Health Snapshot -->
+              <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Activity Log -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs">
+                  <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">${t('auditLog')}</h2>
+                    <span class="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">${t('verifiedImmutable')}</span>
+                  </div>
+                  <div class="divide-y divide-gray-100">
+                    ${state.activities.map(act => `
+                      <div class="py-3 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">
+                            <i data-lucide="${act.icon}" class="w-4 h-4"></i>
+                          </div>
+                          <div>
+                            <p class="text-sm font-medium text-gray-900">${act.title}</p>
+                            <p class="text-xs text-gray-400">${act.time}</p>
+                          </div>
+                        </div>
+                        <span class="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">${act.badge}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- Emergency Profile Snapshot -->
+                <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between mb-4">
+                      <h2 class="text-lg font-bold text-gray-900">${t('emergencyCard')}</h2>
+                      <span class="text-xs bg-red-50 text-red-700 font-semibold px-2 py-0.5 rounded-full">${t('alwaysReady')}</span>
+                    </div>
+                    <div class="space-y-3 text-sm">
+                      <div class="p-3 bg-red-50/60 rounded-xl border border-red-100">
+                        <div class="text-xs text-red-600 font-semibold uppercase">${t('bloodGroup')}</div>
+                        <div class="text-lg font-extrabold text-red-900">${state.user.bloodGroup}</div>
+                      </div>
+                      <div>
+                        <div class="text-xs text-gray-500">${t('allergies')}</div>
+                        <div class="font-medium text-gray-800">${state.user.allergies.join(', ')}</div>
+                      </div>
+                      <div>
+                        <div class="text-xs text-gray-500">${t('medications')}</div>
+                        <div class="font-medium text-gray-800">${state.user.medications.join(', ')}</div>
+                      </div>
+                      <div>
+                        <div class="text-xs text-gray-500">${t('emergencyContact')}</div>
+                        <div class="font-medium text-gray-800 text-xs">${state.user.emergencyContact}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <button onclick="showProfileModal()" class="mt-4 w-full py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-colors">
+                    ${t('editSnapshot')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+
+        case 'records':
+          return `
+            <div class="space-y-6 fade-in">
+              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">${t('medicalRecordsTitle')}</h1>
+                  <p class="text-gray-500 text-sm">${t('medicalRecordsSub')}</p>
+                </div>
+                <button onclick="showConsentModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center gap-2">
+                  <i data-lucide="share-2" class="w-4 h-4"></i>
+                  ${t('authorizeSharing')}
+                </button>
+              </div>
+
+              <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
+                      <tr>
+                        <th class="p-4">${t('recordName')}</th>
+                        <th class="p-4">${t('hospitalProvider')}</th>
+                        <th class="p-4">${t('date')}</th>
+                        <th class="p-4">${t('category')}</th>
+                        <th class="p-4">${t('sharingScope')}</th>
+                        <th class="p-4 text-right">${t('actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                      ${state.records.map(r => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                          <td class="p-4">
+                            <div class="font-semibold text-gray-900">${r.title}</div>
+                            <div class="text-xs text-gray-500 truncate max-w-xs mt-0.5">${r.notes}</div>
+                          </td>
+                          <td class="p-4">
+                            <div class="font-medium text-gray-800">${r.hospitalName}</div>
+                            <div class="text-xs text-gray-400">${r.doctor}</div>
+                          </td>
+                          <td class="p-4 text-gray-600 whitespace-nowrap">${r.date}</td>
+                          <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">${r.type}</span>
+                          </td>
+                          <td class="p-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${r.shared ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}">
+                              <span class="w-1.5 h-1.5 rounded-full ${r.shared ? 'bg-emerald-500' : 'bg-gray-400'}"></span>
+                              ${r.shared ? t('readOnlyShared') : t('privateEncrypted')}
+                            </span>
+                          </td>
+                          <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="shareRecord('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border ${r.shared ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition-colors">
+                              ${r.shared ? t('revoke') : t('share')}
+                            </button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `;
+
+        case 'keys':
+          return `
+            <div class="space-y-6 fade-in">
+              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">${t('hospitalKeysTitle')}</h1>
+                  <p class="text-gray-500 text-sm">${t('hospitalKeysSub')}</p>
+                </div>
+                <button onclick="showGenerateKeyModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center gap-2">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  ${t('generateKey')}
+                </button>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-4">
+                ${state.keys.map(k => `
+                  <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-xs hover:border-blue-300 transition-all">
+                    <div class="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 class="font-bold text-gray-900 text-base">${k.hospitalName}</h3>
+                        <div class="text-xs text-gray-500 font-mono mt-0.5">Key Index: ${k.id}</div>
+                      </div>
+                      <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        ${t('activeValid')}
+                      </span>
+                    </div>
+
+                    <div class="mb-5 p-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+                      <div class="text-xs text-gray-500 font-medium mb-1">Hospital Key Token:</div>
+                      <div class="font-mono text-sm font-semibold text-gray-800 flex items-center justify-between">
+                        <span>${k.keyIndex}</span>
+                        <button onclick="copyToClipboard('${k.keyIndex}', 'Hospital Key')" class="text-blue-600 hover:text-blue-800 text-xs font-sans font-medium flex items-center gap-1">
+                          <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-5">
+                      <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <span class="text-gray-400 block">${t('keyAge')}:</span>
+                        <span class="font-semibold text-gray-800">${k.ageDays} days</span>
+                      </div>
+                      <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <span class="text-gray-400 block">${t('autoExpires')}:</span>
+                        <span class="font-semibold text-gray-800">${k.expiresDays} days</span>
+                      </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                      <button onclick="copyToClipboard('${k.keyIndex}', 'Password Manager Payload')" class="flex-1 py-2 px-3 text-xs bg-gray-100 hover:bg-gray-200 font-semibold text-gray-700 rounded-xl transition-colors">
+                        ${t('savePasswordManager')}
+                      </button>
+                      <button onclick="revokeKey('${k.id}')" class="py-2 px-3 text-xs bg-red-50 hover:bg-red-100 font-semibold text-red-600 rounded-xl transition-colors">
+                        ${t('revoke')}
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+
+        case 'hospitals':
+          return `
+            <div class="space-y-6 fade-in">
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900">${t('hospitalDirectory')}</h1>
+                <p class="text-gray-500 text-sm">${t('hospitalDirectorySub')}</p>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-4">
+                ${state.hospitals.map(h => `
+                  <div class="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="building-2" class="w-5 h-5"></i>
+                          </div>
+                          <div>
+                            <h3 class="font-bold text-gray-900">${h.name}</h3>
+                            <p class="text-xs text-gray-500">${h.city} • Code: ${h.code}</p>
+                          </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">${t('verified')}</span>
+                      </div>
+
+                      <div class="flex flex-wrap gap-2 my-4 text-xs">
+                        ${h.hasKey ? `
+                          <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md font-medium">
+                            <i data-lucide="key" class="w-3.5 h-3.5"></i> ${t('keyConfigured')}
+                          </span>
+                        ` : `
+                          <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md font-medium">
+                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> ${t('noKey')}
+                          </span>
+                        `}
+                        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-medium">
+                          <i data-lucide="folder" class="w-3.5 h-3.5"></i> ${h.visits} ${t('visitsOnFile')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-3 border-t border-gray-100">
+                      ${h.hasKey ? `
+                        <button onclick="navigate('keys')" class="flex-1 py-2 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors">
+                          ${t('manageKey')}
+                        </button>
+                      ` : `
+                        <button onclick="generateKey('${h.id}')" class="flex-1 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors">
+                          ${t('generateKey')}
+                        </button>
+                      `}
+                      <button onclick="navigate('records')" class="flex-1 py-2 text-xs font-semibold border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl transition-colors">
+                        ${t('viewRecords')}
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+
+        case 'emergency':
+          return `
+            <div class="space-y-6 fade-in">
+              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">${t('emergencyProtocol')}</h1>
+                  <p class="text-gray-500 text-sm">${t('emergencyProtocolSub')}</p>
+                </div>
+                <button onclick="showEmergencyModal()" class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm flex items-center gap-2">
+                  <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  ${t('simulateEmergency')}
+                </button>
+              </div>
+
+              <!-- Critical Data Sheet -->
+              <div class="bg-red-50/50 border border-red-200/80 rounded-2xl p-6">
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h2 class="text-lg font-bold text-red-950">${t('emergencySnapshotTitle')}</h2>
+                    <p class="text-xs text-red-700">${t('emergencySnapshotSub')}</p>
+                  </div>
+                </div>
+
+                <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <div class="bg-white p-4 rounded-xl border border-red-100 shadow-2xs">
+                    <div class="text-xs text-gray-500">${t('bloodGroup')}</div>
+                    <div class="text-xl font-extrabold text-red-600">${state.user.bloodGroup}</div>
+                  </div>
+                  <div class="bg-white p-4 rounded-xl border border-red-100 shadow-2xs">
+                    <div class="text-xs text-gray-500">${t('allergies')}</div>
+                    <div class="font-semibold text-gray-800 text-sm">${state.user.allergies.join(', ')}</div>
+                  </div>
+                  <div class="bg-white p-4 rounded-xl border border-red-100 shadow-2xs">
+                    <div class="text-xs text-gray-500">${t('medications')}</div>
+                    <div class="font-semibold text-gray-800 text-sm">${state.user.medications.join(', ')}</div>
+                  </div>
+                  <div class="bg-white p-4 rounded-xl border border-red-100 shadow-2xs">
+                    <div class="text-xs text-gray-500">${t('emergencyContact')}</div>
+                    <div class="font-semibold text-gray-800 text-xs">${state.user.emergencyContact}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Audited Requests -->
+              <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">${t('auditedHistory')}</h2>
+                <div class="divide-y divide-gray-100">
+                  ${state.emergencyRequests.map(eq => `
+                    <div class="py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div>
+                        <div class="flex items-center gap-3">
+                          <span class="font-semibold text-gray-900">${eq.hospital}</span>
+                          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">${eq.status}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1"><strong>Doctor:</strong> ${eq.requester} • <strong>Reason:</strong> ${eq.reason}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${eq.date}</p>
+                      </div>
+                      <div class="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                        <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+                        ${t('patientNotified')}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+      }
+    }
+
+    // --- Modal Functions ---
+    function showConsentModal() {
+      openModal(`
+        <h3 class="text-xl font-bold text-gray-900 mb-2">${t('authorizeSharing')}</h3>
+        <p class="text-xs text-gray-500 mb-4">Select target hospital and specify auto-expiration duration and scope.</p>
+
+        <form onsubmit="handleConsentSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">${t('hospitals')}</label>
+            <select id="consentHosp" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              ${state.hospitals.map(h => `<option value="${h.name}">${h.name} (${h.city})</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Consent Validity</label>
+            <select id="consentDuration" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="7">7 Days</option>
+              <option value="30" selected>30 Days</option>
+              <option value="90">90 Days</option>
+              <option value="365">365 Days</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">${t('sharingScope')} (Read-Only)</label>
+            <div class="space-y-2 text-xs text-gray-700">
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-blue-600" /> Laboratory & Diagnostics</label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-blue-600" /> Prescriptions & Medications</label>
+              <label class="flex items-center gap-2"><input type="checkbox" checked class="rounded text-blue-600" /> Discharge Summaries</label>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-4">
+            <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold">${t('cancel')}</button>
+            <button type="submit" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">${t('grantConsent')}</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleConsentSubmit(e) {
+      e.preventDefault();
+      const hosp = document.getElementById('consentHosp').value;
+      const days = document.getElementById('consentDuration').value;
+
+      state.activities.unshift({
+        icon: 'share-2',
+        title: `Granted ${days}-day read-only consent to ${hosp}`,
+        time: 'Just now',
+        badge: 'Consent'
+      });
+      saveState();
+      showToast(t('grantConsent'), `Authorized ${hosp} for ${days} days read-only.`);
+      closeModal();
+      render();
+    }
+
+    function showGenerateKeyModal() {
+      openModal(`
+        <h3 class="text-xl font-bold text-gray-900 mb-2">${t('generateKey')}</h3>
+        <p class="text-xs text-gray-500 mb-4">Create a new isolated key token for an authorized facility.</p>
+
+        <div class="space-y-3">
+          ${state.hospitals.map(h => `
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between">
+              <div>
+                <div class="font-semibold text-gray-900 text-sm">${h.name}</div>
+                <div class="text-xs text-gray-500">${h.city} • Code: ${h.code}</div>
+              </div>
+              <button onclick="generateKey('${h.id}')" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">
+                ${t('generateKey')}
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      `);
+    }
+
+    function showEmergencyModal() {
+      openModal(`
+        <div class="flex items-center gap-3 text-red-600 mb-3">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+          <h3 class="text-xl font-bold text-gray-900">${t('simulateEmergency')}</h3>
+        </div>
+        <p class="text-xs text-gray-500 mb-4">
+          Emergency overrides require hospital identification, doctor credentials, and an urgent medical justification.
+        </p>
+
+        <form onsubmit="requestEmergencyAccess(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Requesting Hospital / Trauma Unit</label>
+            <input id="emgHosp" type="text" required value="Metropolitan Trauma Center" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Attending Physician</label>
+            <input id="emgDoctor" type="text" required value="Dr. Robert Hayes (Trauma Resident)" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Urgent Clinical Justification</label>
+            <textarea id="emgReason" required rows="3" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500">Unresponsive patient in ER following trauma collision. Immediate allergy and drug reaction record access required.</textarea>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold">${t('cancel')}</button>
+            <button type="submit" class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 shadow-sm">${t('authorizeEmergency')}</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function showProfileModal() {
+      openModal(`
+        <h3 class="text-xl font-bold text-gray-900 mb-2">${t('myProfile')}</h3>
+        <p class="text-xs text-gray-500 mb-4">Update your verified contact and emergency medical parameters.</p>
+
+        <form onsubmit="handleProfileSubmit(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">${t('fullName')}</label>
+            <input id="profName" type="text" required value="${state.user.fullName}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">${t('age')}</label>
+              <input id="profAge" type="number" required value="${state.user.age}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">${t('bloodGroup')}</label>
+              <input id="profBlood" type="text" required value="${state.user.bloodGroup}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">${t('phone')}</label>
+            <input id="profPhone" type="text" required value="${state.user.phone}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">${t('emergencyContact')}</label>
+            <input id="profEmergency" type="text" required value="${state.user.emergencyContact}" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm" />
+          </div>
+
+          <div class="flex gap-2 pt-3">
+            <button type="button" onclick="closeModal()" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold">${t('cancel')}</button>
+            <button type="submit" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">${t('saveProfile')}</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleProfileSubmit(e) {
+      e.preventDefault();
+      state.user.fullName = document.getElementById('profName').value;
+      state.user.age = parseInt(document.getElementById('profAge').value);
+      state.user.bloodGroup = document.getElementById('profBlood').value;
+      state.user.phone = document.getElementById('profPhone').value;
+      state.user.emergencyContact = document.getElementById('profEmergency').value;
+      saveState();
+      showToast(t('saveProfile'), 'Your patient profile and emergency indicators have been updated.');
+      closeModal();
+      render();
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
